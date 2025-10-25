@@ -1,0 +1,388 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>LoRaDex Prime — Autobot Command Dashboard</title>
+
+  <!-- Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=Inter:wght@300;600;700&display=swap" rel="stylesheet">
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js" defer></script>
+
+  <!-- Leaflet for map -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" defer></script>
+
+  <!-- Firebase compat SDK (kept for your backend hooks) -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js" defer></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js" defer></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js" defer></script>
+
+  <!-- Main theme CSS (I'll provide this when you want it) -->
+  <link rel="stylesheet" href="css/autobot.css">
+
+  <meta name="theme-color" content="#001427" />
+</head>
+<body class="autobot-root">
+
+  <!-- Top HUD -->
+  <header class="hud header-ship">
+    <div class="hud-left">
+      <div class="logo-wrap" aria-hidden="true">
+        <!-- Autobot emblem (SVG) -->
+        <svg class="autobot-logo" width="48" height="48" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <defs><linearGradient id="g1" x1="0" x2="1"><stop offset="0" stop-color="#00f6ff"/><stop offset="1" stop-color="#0077ff"/></linearGradient></defs>
+          <rect width="64" height="64" rx="10" fill="#021026"/>
+          <path d="M16 12 L48 12 L44 28 L20 28 Z" fill="url(#g1)" opacity="0.95"/>
+          <path d="M20 32 L44 32 L36 52 L28 52 Z" fill="#00293d"/>
+        </svg>
+      </div>
+      <div class="title-text">
+        <h1>PD Prime</h1>
+        <p class="subtitle">Transformer Analytics — Partial Discharge & Health Telemetry</p>
+      </div>
+    </div>
+
+    <div class="hud-right">
+      <div class="hud-item small muted">Last Update: <span id="lastSeen">—</span></div>
+      <div class="hud-item">
+        <div id="espStatus" class="status-pill offline" role="status" aria-live="polite">Offline</div>
+      </div>
+      <button id="btnRefresh" class="btn-glow">REBOOT</button>
+    </div>
+  </header>
+
+  <!-- Main grid -->
+  <div class="grid-viewport">
+
+    <!-- Left column -->
+    <main class="col-left">
+
+      <!-- Primary metrics -->
+      <section class="panel metrics-panel">
+        <div class="metric">
+          <div class="metric-title">Voltage</div>
+          <div class="metric-value" id="datG"><span>0</span> V</div>
+          <div class="metric-sub">Inbound Transformer Voltage</div>
+        </div>
+
+        <div class="metric">
+          <div class="metric-title">Current</div>
+          <div class="metric-value" id="datI"><span>0</span>A</div>
+          <div class="metric-sub">Inbound Transformer Current</div>
+        </div>
+
+        <div class="metric">
+          <div class="metric-title">Frequency</div>
+          <div class="metric-value" id="datH"><span>0</span>Hz</div>
+          <div class="metric-sub">Inbound Power Frequency</div>
+        </div>
+      </section>
+
+            <section class="panel metrics-panel">
+        <div class="metric">
+          <div class="metric-title">Accoustic Intesity</div>
+          <div class="metric-value" id="datD"><span>0</span>dB</div>
+          <div class="metric-sub">Transformer Accoustics</div>
+        </div>
+
+        <div class="metric">
+          <div class="metric-title">Oil Level</div>
+          <div class="metric-value" id="datE"><span>0</span>%</div>
+          <div class="metric-sub">Transformer Coolant Oil</div>
+        </div>
+
+        <div class="metric">
+          <div class="metric-title">Oil Density</div>
+          <div class="metric-value" id="datF"><span>0</span>kg/m³</div>
+          <div class="metric-sub">Coolant Oil Density</div>
+        </div>
+      </section>
+
+            <section class="panel metrics-panel">
+        <div class="metric">
+          <div class="metric-title">Temperature</div>
+          <div class="metric-value" id="datA"><span>0</span>°C</div>
+          <div class="metric-sub">Transformer Core Temperature</div>
+        </div>
+
+        <div class="metric">
+          <div class="metric-title">Pressure</div>
+          <div class="metric-value" id="datC"><span>0</span>hPa</div>
+          <div class="metric-sub">Transformer Core Pressure</div>
+        </div>
+
+        <div class="metric">
+          <div class="metric-title">Altitude</div>
+          <div class="metric-value" id="datB"><span>0</span>m</div>
+          <div class="metric-sub">Transformer Position</div>
+        </div>
+        
+      </section>
+
+            <section class="panel metrics-panel">
+        <div class="metric">
+          <div class="metric-title">PD Volts</div>
+          <div class="metric-value" id="datJ"><span>0</span>μV</div>
+          <div class="metric-sub">Partial Discharge Microvoltage</div>
+        </div>
+
+        <div class="metric">
+          <div class="metric-title">PD Frequency</div>
+          <div class="metric-value" id="datK"><span>0</span>GHz</div>
+          <div class="metric-sub">Partial Discharge Frequency</div>
+        </div>
+
+        <div class="metric">
+          <div class="metric-title">PD Intensity</div>
+          <div class="metric-value" id="datL"><span>0</span></div>
+          <div class="metric-sub">Partial Discharge Magnitude</div>
+        </div>
+      </section>
+
+<!-- EMF Trend chart -->
+<section class="panel chart-panel">
+  <div class="panel-head">
+    <h3>Partial Discharge Analytics — Live Trend</h3>
+    <span class="muted">Realtime telemetry</span>
+  </div>
+
+  <!-- Checkbox toggles for datasets -->
+  <div id="chart-toggles" class="chart-toggles">
+    <label><input type="checkbox" checked value="g"> Voltage</label>
+    <label><input type="checkbox" checked value="i"> Current</label>
+    <label><input type="checkbox" checked value="h"> Frequency</label>
+    <label><input type="checkbox" checked value="d"> Acoustic Intensity</label>
+    <label><input type="checkbox" checked value="e"> Oil Level</label>
+    <label><input type="checkbox" checked value="f"> Oil Density</label>
+    <label><input type="checkbox" checked value="a"> Temperature</label>
+    <label><input type="checkbox" checked value="c"> Pressure</label>
+    <label><input type="checkbox" checked value="b"> Altitude</label>
+    <label><input type="checkbox" checked value="j"> PD Volts</label>
+    <label><input type="checkbox" checked value="k"> PD Frequency</label>
+    <label><input type="checkbox" checked value="l"> PD Intensity</label>
+  </div>
+
+  <div class="chart-frame">
+    <canvas id="emfChart" aria-label="EMF trend chart" role="img"></canvas>
+  </div>
+</section>
+
+
+    </main>
+
+    <!-- Right column -->
+    <aside class="col-right">
+
+      <!-- Cellular cards (Autobot HUD style) -->
+      <section class="panel network-grid" aria-label="Cellular Operators">
+        <div class="op-card" id="airtelCard">
+          <div class="op-head"><h4>Processor</h4></div>
+          <div class="op-body">
+            <div class="op-row"><span>Core 1</span><div class="bar"><div class="fill" id="airtelGSM"></div></div><span id="airtelGSMLabel">—</span></div>
+            <div class="op-row"><span>Core 2</span><div class="bar"><div class="fill" id="airtel4G"></div></div><span id="airtel4GLabel">—</span></div>
+            <div class="op-row"><span>Core 3</span><div class="bar"><div class="fill" id="airtel5G"></div></div><span id="airtel5GLabel">—</span></div>
+          </div>
+        </div>
+
+        <div class="op-card" id="jioCard">
+          <div class="op-head"><h4>Network</h4></div>
+          <div class="op-body">
+            <div class="op-row"><span>ESP</span><div class="bar"><div class="fill" id="jioGSM"></div></div><span id="jioGSMLabel">—</span></div>
+            <div class="op-row"><span>Wi-Fi</span><div class="bar"><div class="fill" id="jio4G"></div></div><span id="jio4GLabel">—</span></div>
+            <div class="op-row"><span>UART</span><div class="bar"><div class="fill" id="jio5G"></div></div><span id="jio5GLabel">—</span></div>
+          </div>
+        </div>
+
+        <div class="op-card" id="bsnlCard">
+          <div class="op-head"><h4>Server</h4></div>
+          <div class="op-body">
+            <div class="op-row"><span>U-Link</span><div class="bar"><div class="fill" id="bsnlGSM"></div></div><span id="bsnlGSMLabel">—</span></div>
+            <div class="op-row"><span>D-Link</span><div class="bar"><div class="fill" id="bsnl4G"></div></div><span id="bsnl4GLabel">—</span></div>
+            <div class="op-row"><span>Speed</span><div class="bar"><div class="fill" id="bsnl5G"></div></div><span id="bsnl5GLabel">—</span></div>
+          </div>
+        </div>
+
+        <div class="op-card" id="viCard">
+          <div class="op-head"><h4>Transponder</h4></div>
+          <div class="op-body">
+            <div class="op-row"><span>A-Band</span><div class="bar"><div class="fill" id="viGSM"></div></div><span id="viGSMLabel">—</span></div>
+            <div class="op-row"><span>B-Band</span><div class="bar"><div class="fill" id="vi4G"></div></div><span id="vi4GLabel">—</span></div>
+            <div class="op-row"><span>C-Band</span><div class="bar"><div class="fill" id="vi5G"></div></div><span id="vi5GLabel">—</span></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Radiation level -->
+      <section class="panel radiation-panel">
+        <h3>Transformer Health</h3>
+        <div id="radiationContainer" class="radiation-track" aria-hidden="true">
+          <div id="radiationBar" class="radiation-fill" style="width:0%"></div>
+        </div>
+        <div id="radiationLabel" class="radiation-label">—</div>
+      </section>
+
+    
+
+<!-- Data Logger Panel -->
+<section class="panel logger-panel">
+<h3 class="lined-heading">Data Logger</h3>
+<div class="muted">Realtime parameter recorder</div>
+
+  <div class="logger-actions">
+    <button id="btnStartLog" class="btn-outline">Start</button>
+    <button id="btnSaveLog" class="btn-glow">Save</button>
+  </div>
+  <div class="log-indicator">
+    <span id="logIndicator" class="dot"></span>
+    <span class="muted small">Logging inactive</span>
+  </div>
+</section>
+
+
+<!-- Control Panel card (put inside .network-grid) -->
+ <section class="panel logger-panel">
+<div id="controlCard" aria-label="Control Panel">
+  <div class="op-head"><h4>Control Panel</h4></div>
+  <div class="op-body">
+
+    <!-- Row: Mosfets -->
+    <div class="control-row">
+      <div class="small-card">
+        <div class="small-head">Mosfet A</div>
+        <div class="small-body">
+          <label class="switch">
+            <input type="checkbox" id="mosfetA">
+            <span class="slider neon"></span>
+          </label>
+        </div>
+      </div>
+
+      <div class="small-card">
+        <div class="small-head">Mosfet B</div>
+        <div class="small-body">
+          <label class="switch">
+            <input type="checkbox" id="mosfetB">
+            <span class="slider neon"></span>
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <!-- Row: WLEDs -->
+    <div class="control-row">
+      <div class="small-card">
+        <div class="small-head">WLED1</div>
+        <div class="small-body">
+          <select id="wled1Select" class="wled-select">
+            <option value="0">Startup</option>
+            <option value="1">Online</option>
+            <option value="2">Error</option>
+            <option value="3">Critical</option>
+            <option value="4">Off</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="small-card">
+        <div class="small-head">WLED2</div>
+        <div class="small-body">
+          <select id="wled2Select" class="wled-select">
+            <option value="0">Startup</option>
+            <option value="1">Online</option>
+            <option value="2">Error</option>
+            <option value="3">Critical</option>
+            <option value="4">Off</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- Row: Display Port -->
+    <div class="display-card">
+      <div class="small-head">Display Mode</div>
+      <div class="display-body">
+        <div class="mode-row">
+          <span class="muted">Auto</span>
+          <label class="neon-toggle">
+            <input type="checkbox" id="displayModeToggle">
+            <span class="neon-track"></span>
+          </label>
+          <span class="muted">Manual</span>
+        </div>
+
+        <div class="display-inputs">
+          <input type="text" id="displayTop" placeholder="Top line (manual)" disabled>
+          <input type="text" id="displayBottom" placeholder="Bottom line (manual)" disabled>
+          <div class="display-actions">
+            <button id="displaySaveBtn" class="btn-outline" disabled>Commit</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+</section>
+
+  <!-- User card -->
+      <section class="panel user-panel">
+        <h3>User</h3>
+        <div class="muted">Logged in as</div>
+        <div id="userName" class="user-name">—</div>
+        <div id="userEmail" class="muted user-email">—</div>
+        <div class="user-actions">
+          <button id="btnSignOut" class="btn-outline">Sign out</button>
+        </div>
+      </section>
+
+
+    </aside>
+
+
+    <!-- Map full width -->
+    <section class="panel map-panel">
+      <div class="map-head">
+        <h3>Location Map</h3>
+        <span class="muted">Module Geo Co-ordinates</span>
+      </div>
+      <div id="map" class="map-canvas" style="height:320px;"></div>
+    </section>
+
+  </div>
+
+  <!-- Footer / Console -->
+  <footer class="hud footer-ship">
+    <div>Connected: <span id="projectIdTagFooter">Server/South-Asia</span></div>
+    <div class="muted">Built for Boss — PD Prime</div>
+  </footer>
+<!-- Frosted Save Dialog -->
+<div id="saveDialog" class="save-dialog">
+  <div class="dialog-content">
+    <h3>Data Saved</h3>
+    <p>Your log has been exported as a CSV file.</p>
+  </div>
+</div>
+
+<!-- Frosted reboot dialog -->
+<div id="rebootDialog" class="frost-dialog">
+  <div class="frost-box">
+    <h3>System Rebooting…</h3>
+    <p class="muted">Please wait while the system restarts</p>
+  </div>
+</div>
+
+<!-- Frosted Sign Out Dialog -->
+<div id="signOutDialog" class="frost-dialog">
+  <div class="frost-box">
+    <h3>Signing Out…</h3>
+    <p class="muted">Please wait while we log you out</p>
+  </div>
+</div>
+
+
+  <script src="js/autobot.js" defer></script>
+</body>
+</html>
